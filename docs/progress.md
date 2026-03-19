@@ -71,6 +71,46 @@
 - `pnpm-lock.yaml`
 - `.gitignore`
 
+#### 5. list コマンド実装 (v0.2.1)
+
+**Changes**
+
+- `src/cli/list.ts` を新規作成。recordings/ 配下のタスクディレクトリを走査し、recorded / briefed / skilled の3段階で状態を判定して一覧表示する。
+- `src/cli/index.ts` を更新。list コマンドのスタブを `runList` への委譲に置き換え。
+
+**Changed files**
+
+- src/cli/list.ts
+- src/cli/index.ts
+
+#### 6. 進捗ログを docs/ に移動
+
+**Changes**
+
+- `PROGRESS.md` をルートから `docs/progress.md` に移動。
+- `.gitignore` を更新: `docs/` 全体の除外を `docs/memo.md` のみの除外に変更し、進捗ログやアーキテクチャドキュメントを Git 追跡対象に含めた。
+
+**Changed files**
+
+- `.gitignore`
+
+#### 7. brief-builder リファクタリング — スキル生成指示の簡素化 & 改善 (v0.2.2)
+
+**Issue**
+
+- `buildPlaywrightCliReference()` 関数（約77行）がインラインで playwright-cli の使い方を記述しており、外部の SKILL.md と二重管理になっていた。また、生成されるスキルに `AskUserQuestion` の使用指示や `run-code` のシングルライン記述ルールが含まれていなかった。
+
+**Changes**
+
+- `buildPlaywrightCliReference()` 関数を削除し、外部ファイル（`.claude/skills/playwright-cli/SKILL.md`）への参照に置換。二重管理を解消。
+- スキル生成指示セクションを簡素化: 認証方式別ガイドを3行に集約、フロントマターの注意事項を追加。
+- 「ユーザーへの質問」セクションを追加: `AskUserQuestion` ツールの使用を指示。
+- 「run-code の記述」セクションを追加: シェル解析エラー防止のためシングルライン記述ルールを明記。
+
+**Changed files**
+
+- `src/analyzer/brief-builder.ts`
+
 ## 2026/03/09
 
 #### 1. auth-state.json の認証情報取得を修正 (v0.1.1)

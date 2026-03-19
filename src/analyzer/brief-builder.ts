@@ -84,28 +84,38 @@ export function buildBrief(
   // --- スキルファイル生成指示 ---
   lines.push('## スキルファイル生成指示');
   lines.push('');
-  lines.push(`このブリーフを基に、\`skill-creator\` スキルを呼び出してスキルファイルを生成してください。`);
+  lines.push('このブリーフを基に、`skill-creator` スキルを呼び出してスキルファイルを生成してください。');
   lines.push('');
   lines.push(`- **生成先**: \`.claude/skills/${taskName}/SKILL.md\``);
-  lines.push(`- **種類**: playwright-cli（\`@playwright/cli\`）コマンドをエージェントのシェルツールで実行するスキル`);
-  lines.push(`- **認証**: \`--extension\` モードで既存ブラウザに接続し、ログイン済み Cookie を利用`);
+  lines.push('- **ベーススキル**: `playwright-cli` スキル（`.claude/skills/playwright-cli/SKILL.md`）を使用してブラウザ操作を実行');
+  lines.push('- **認証**: `--extension` モードで既存ブラウザに接続（ログイン済み Cookie を利用）');
   lines.push('- **要素指定**: `snapshot` → `ref` 番号で要素を指定');
   lines.push('- **最短経路優先**: skip 判定のステップはスキルに含めず、可能なら API を直接呼ぶ');
+  lines.push('- **フロントマター**: `allowed-tools` はスキルファイルで非対応。`name` と `description` のみ記載すること');
   lines.push('');
-
-  lines.push(...buildPlaywrightCliReference());
-
-  // 認証方式別の指示
-  lines.push('### API ステップの認証方式別ガイド');
+  lines.push('### playwright-cli の利用');
   lines.push('');
-  lines.push('- **cookie / none**: `run-code` + `page.evaluate(() => fetch(...))` を使い REST API を直接呼び出す。Cookie は接続先ブラウザから自動適用');
-  lines.push('- **bearer**: Authorization ヘッダーは接続先ブラウザの Cookie に含まれない。UI フロー維持を推奨。playwright-cli の `click`, `fill`, `press` コマンドで記述。トークン取得元（localStorage キー名、別 API レスポンス等）を特定して事前取得ステップを生成する方法もあり');
-  lines.push('- **basic**: HTTP Basic 認証。Bearer と同様。UI フロー維持を推奨し、playwright-cli の `click`, `fill`, `press` コマンドで記述。直接呼び出す場合はクレデンシャルをスキル引数として定義');
-  lines.push('- **csrf**: CSRF トークンの取得元ヘッダ名がブリーフに記載されている。スキル内で `run-code` + `page.evaluate()` でトークン取得 → fetch ヘッダ付与の2段階で実行');
+  lines.push('ブラウザ操作は `playwright-cli` スキル（`.claude/skills/playwright-cli/SKILL.md`）のコマンドで実行する。');
+  lines.push('`playwright-cli` はローカルインストールのため、すべてのコマンドを `pnpm exec playwright-cli` で実行すること。');
+  lines.push('API 呼び出しは `run-code` + `page.evaluate(() => fetch(...))` パターンを使用（詳細は `.claude/skills/playwright-cli/references/running-code.md` を参照）。');
+  lines.push('');
+  lines.push('### 認証方式別の方針');
+  lines.push('');
+  lines.push('- **cookie / none**: API 直接呼び出し可。Cookie はブラウザから自動適用');
+  lines.push('- **bearer / basic**: UI フロー維持を推奨。API 直接呼び出しにはトークン/クレデンシャルの事前取得が必要');
+  lines.push('- **csrf**: CSRF トークン取得 → API 呼び出しの2段階。トークン取得元はブリーフの各ステップに記載');
   lines.push('');
   lines.push('### フォーム入力');
   lines.push('');
   lines.push('記録された value は参考値。パラメータ化が必要な場合はスキルの引数として定義してください。');
+  lines.push('');
+  lines.push('### ユーザーへの質問');
+  lines.push('');
+  lines.push('ユーザーへの質問・確認が必要な場合は、テキスト出力ではなく必ず `AskUserQuestion` ツールを使用すること。');
+  lines.push('');
+  lines.push('### run-code の記述');
+  lines.push('');
+  lines.push('`run-code` のコードはシェル解析エラーを避けるため、必ずシングルライン（1行）で記述すること。');
   lines.push('');
 
   return lines.join('\n');
@@ -242,77 +252,3 @@ function findBestSnapshot(
   return best;
 }
 
-function buildPlaywrightCliReference(): string[] {
-  const lines: string[] = [];
-
-  lines.push('### playwright-cli リファレンス');
-  lines.push('');
-
-  // 前提条件
-  lines.push('#### 前提条件');
-  lines.push('');
-  lines.push('- `@playwright/cli` がローカルインストール済みであること。コマンドは必ず **`pnpm exec playwright-cli`** で実行する（`npx` は未インストール時にリモートからインストールしようとするため避ける）');
-  lines.push('- 既存ブラウザへの接続: **`--extension` モード** を使用。Playwright MCP Bridge 拡張を Chrome にインストールし、`--extension` フラグで接続');
-  lines.push('- **実行前に MCP Bridge 拡張のアイコンをクリックして Connect しておくこと**（権限ダイアログの表示を回避するため）');
-  lines.push('- 接続設定は `.playwright/cli.config.json` または環境変数で事前設定を推奨（コマンドごとにフラグを渡さない）');
-  lines.push('');
-
-  // セッション管理
-  lines.push('#### セッション管理');
-  lines.push('');
-  lines.push('スキル実行時は名前付きセッションを使用する：');
-  lines.push('');
-  lines.push('    pnpm exec playwright-cli -s={taskName} open {url}');
-  lines.push('');
-  lines.push('**重要**: `pnpm exec` は呼び出しごとに別プロセスとなるため、`open` → `run-code` → `close` を **`&&` でチェーン**して1行にまとめること。分割するとセッションが切れて「browser is not open」エラーになる：');
-  lines.push('');
-  lines.push('    pnpm exec playwright-cli -s={name} open --extension {url} && pnpm exec playwright-cli -s={name} run-code "..." && pnpm exec playwright-cli -s={name} close');
-  lines.push('');
-  lines.push('セッション一覧: `pnpm exec playwright-cli list`');
-  lines.push('');
-
-  // コマンド構文
-  lines.push('#### コマンド構文');
-  lines.push('');
-  lines.push('| 操作 | 構文 |');
-  lines.push('|---|---|');
-  lines.push('| ナビゲーション | `pnpm exec playwright-cli -s={name} open {url}` |');
-  lines.push("| API 呼び出し（GET） | `pnpm exec playwright-cli -s={name} run-code \"async page => { const r = await page.evaluate(() => fetch('{url}').then(r => r.json())); return JSON.stringify(r); }\"` |");
-  lines.push("| API 呼び出し（POST/DELETE） | `pnpm exec playwright-cli -s={name} run-code \"async page => { const r = await page.evaluate(() => fetch('{url}', { method: '{METHOD}', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...}).toString() }).then(r => r.json())); return JSON.stringify(r); }\"` |");
-  lines.push('| スナップショット | `pnpm exec playwright-cli -s={name} snapshot` |');
-  lines.push('| クリック | `pnpm exec playwright-cli -s={name} click {ref}` |');
-  lines.push("| テキスト入力 | `pnpm exec playwright-cli -s={name} fill {ref} '{value}'` |");
-  lines.push('| キー押下 | `pnpm exec playwright-cli -s={name} press Enter` |');
-  lines.push('| タブ一覧 | `pnpm exec playwright-cli -s={name} tab-list` |');
-  lines.push('| スクリーンショット | `pnpm exec playwright-cli -s={name} screenshot` |');
-  lines.push('');
-
-  // ref 番号について
-  lines.push('#### ref 番号について');
-  lines.push('');
-  lines.push('- `snapshot` コマンドの出力にアクセシビリティツリーが YAML 形式で表示される');
-  lines.push('- 各要素に `ref` 番号が付与される');
-  lines.push('- `click`, `fill` 等のコマンドではこの `ref` 番号で要素を指定する');
-  lines.push('- UI 操作の流れ: `snapshot` → ref 確認 → `click {ref}` or `fill {ref} \'{value}\'`');
-  lines.push('');
-
-  // API 呼び出しのパターン
-  lines.push('#### API 呼び出しのパターン');
-  lines.push('');
-  lines.push('- **`eval` は単純な式評価用**（例: `eval "document.title"`）。`fetch().then()` チェーンでは `TypeError` になるため API 呼び出しには使わない');
-  lines.push('- API 呼び出しには **`run-code` + `page.evaluate()`** を使う: `run-code "async page => { const r = await page.evaluate(() => fetch(...).then(r => r.json())); return JSON.stringify(r); }"`');
-  lines.push('- `page.evaluate()` 内の `fetch()` はブラウザコンテキストで実行されるため、ログイン済み Cookie が自動適用される');
-  lines.push('- API レスポンスのフィールド名はブリーフの `responseSummary` を参照して正確な名前を使用する');
-  lines.push('');
-
-  // 注意事項
-  lines.push('#### 注意事項');
-  lines.push('');
-  lines.push('- `--state` オプションは存在しない。認証は接続先ブラウザの既存 Cookie に依存');
-  lines.push('- ARIA ロール+名前によるセレクタではなく、`snapshot` → `ref` 番号で要素を指定する');
-  lines.push('- `page.goto`, `page.evaluate` 等の生 Playwright API をコマンドラインから直接使用しない（`run-code` コマンド経由で使う）');
-  lines.push('- コマンドを分割して実行するとセッションが切れるため、必ず `&&` でチェーンする');
-  lines.push('');
-
-  return lines;
-}

@@ -6,4 +6,4 @@ recordings/*/
 .mcp.json
 *.log
 plans/
-docs/
+docs/memo.md
