@@ -15,9 +15,9 @@ export interface WaConfig {
     maxRequestBodyLength: number;
   };
   analysis?: {
-    // Milestone 4 で追加する。Milestone 2 の config.ts では省略する
     actionApiCorrelationWindowMs: number;
     goalMethods: string[];
+    goalExcludePatterns: string[];  // テレメトリ/メトリクス系URLを goal 候補から除外するパターン
   };
   recordingsDir: string;
   skillsDir: string;

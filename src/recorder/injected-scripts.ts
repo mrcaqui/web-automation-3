@@ -80,6 +80,7 @@ export function getActionRecorderScript(): string {
             type: 'change',
             pageUrl: location.href,
             element: getElementInfo(target),
+            value: target.value != null ? String(target.value).slice(0, 500) : undefined,
           });
         };
         document.addEventListener('change', window.__waHandlers.change, true);
@@ -92,6 +93,7 @@ export function getActionRecorderScript(): string {
             type: 'input',
             pageUrl: location.href,
             element: getElementInfo(target),
+            value: target.value != null ? String(target.value).slice(0, 500) : undefined,
           });
         };
         document.addEventListener('input', window.__waHandlers.input, true);

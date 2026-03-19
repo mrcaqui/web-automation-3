@@ -15,6 +15,24 @@ export const config: WaConfig = {
     maxResponseSummaryLength: 200,
     maxRequestBodyLength: 500,
   },
+  analysis: {
+    actionApiCorrelationWindowMs: 1000,
+    goalMethods: ['POST', 'PATCH', 'PUT', 'DELETE'],
+    goalExcludePatterns: [
+      // 汎用テレメトリパス
+      '/telemetry', '/analytics/', '/tracking/', '/metrics/', '/clientmetrics',
+      '/gen_204', '/beacon', '/heartbeat',
+      // サードパーティ分析サービス
+      '.2o7.net/',           // Adobe Analytics
+      'google-analytics',    // Google Analytics
+      '.amplitude.com/',     // Amplitude
+      '.mixpanel.com/',      // Mixpanel
+      '.segment.io/',        // Segment
+      '.sentry.io/',         // Sentry
+      '.pendo.io/',          // Pendo
+      'capig.stape.jp/',     // サーバーサイドタグ
+    ],
+  },
   recordingsDir: './recordings',
   skillsDir: './.claude/skills',
 };

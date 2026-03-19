@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { runStatus } from './status.js';
 import { runRecord } from './record.js';
+import { runAnalyze } from './analyze.js';
 
 const program = new Command();
 program
@@ -16,7 +17,7 @@ program.command('record <name>')
 
 program.command('analyze <name>')
   .description('記録を分析しanalysis-brief.mdを生成する（スキル生成はClaude Codeが担当）')
-  .action(() => console.log('Not implemented yet'));
+  .action((name) => runAnalyze(name));
 
 program.command('list')
   .description('記録・スキル一覧を表示する')

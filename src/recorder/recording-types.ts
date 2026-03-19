@@ -12,6 +12,7 @@ export interface RecordedAction {
     ariaRef?: string;
     context: string;
   };
+  value?: string;  // input/change イベント時の入力値（最大500文字）
 }
 
 export interface RecordedRequest {

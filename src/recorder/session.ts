@@ -101,6 +101,11 @@ export class RecordingSession {
         fs.writeFile(path.join(recordingDir, 'requests.json'), JSON.stringify(data.requests, null, 2)),
         fs.writeFile(path.join(recordingDir, 'snapshots.json'), JSON.stringify(data.snapshots, null, 2)),
         fs.writeFile(path.join(recordingDir, 'auth-state.json'), JSON.stringify(authState, null, 2)),
+        fs.writeFile(path.join(recordingDir, 'metadata.json'), JSON.stringify({
+          startTime: data.startTime,
+          endTime: data.endTime,
+          startUrl: data.startUrl,
+        }, null, 2)),
       ]);
 
       // 6. latest/ ディレクトリに auth-state.json をコピー

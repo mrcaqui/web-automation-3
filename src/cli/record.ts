@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { PlaywriterClient, ensurePlaywriterReady } from '../core/playwriter-client.js';
 import { RecordingSession } from '../recorder/session.js';
+import { runAnalyze } from './analyze.js';
 
 export async function runRecord(name: string, options: { url?: string; analyze?: boolean }): Promise<void> {
   const client = new PlaywriterClient();
@@ -37,7 +38,13 @@ export async function runRecord(name: string, options: { url?: string; analyze?:
     console.log(`  リクエスト数: ${data.requests.length}`);
     console.log(`  スナップショット数: ${data.snapshots.length}`);
     console.log('');
-    console.log(chalk.dim(`次のステップ: pnpm wa analyze ${name}`));
+
+    if (options.analyze) {
+      console.log(chalk.cyan('--analyze フラグにより自動分析を開始します...'));
+      await runAnalyze(name, recordingDir);
+    } else {
+      console.log(chalk.dim(`次のステップ: pnpm wa analyze ${name}`));
+    }
   } catch (error) {
     console.error(chalk.red('記録エラー:'), error instanceof Error ? error.message : error);
     console.error(chalk.yellow('以下を確認してください:'));
