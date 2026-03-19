@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { runStatus } from './status.js';
 import { runRecord } from './record.js';
 import { runAnalyze } from './analyze.js';
+import { runList } from './list.js';
 
 const program = new Command();
 program
@@ -21,7 +22,7 @@ program.command('analyze <name>')
 
 program.command('list')
   .description('記録・スキル一覧を表示する')
-  .action(() => console.log('Not implemented yet'));
+  .action(runList);
 
 program.command('status')
   .description('Playwriter接続状態を確認する')
