@@ -2,13 +2,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import { RecordingData } from '../recorder/recording-types.js';
 import { ShortestPathResult, ClassifiedAction } from '../core/types.js';
+import { config } from '../core/config.js';
 
 export function buildBrief(
   taskName: string,
   timestamp: string,
   data: RecordingData,
   result: ShortestPathResult,
-  authStatePath: string,
 ): string {
   const lines: string[] = [];
 
@@ -16,7 +16,6 @@ export function buildBrief(
   lines.push('---');
   lines.push(`task: ${taskName}`);
   lines.push(`recordingTimestamp: "${timestamp}"`);
-  lines.push(`authStatePath: "${authStatePath}"`);
   lines.push(`totalActions: ${result.classified.length}`);
   lines.push(`goalRequests: ${result.goalRequests.length}`);
   lines.push(`skippedActions: ${result.skippedCount}`);
@@ -88,7 +87,7 @@ export function buildBrief(
   lines.push('');
   lines.push(`- **生成先**: \`.claude/skills/${taskName}/SKILL.md\``);
   lines.push('- **ベーススキル**: `playwright-cli` スキル（`.claude/skills/playwright-cli/SKILL.md`）を使用してブラウザ操作を実行');
-  lines.push('- **認証**: `--extension` モードで既存ブラウザに接続（ログイン済み Cookie を利用）');
+  lines.push(`- **認証**: \`--extension\` モードで AutomationProfile の Chrome に接続（SSO 認証済みセッションを利用）`);
   lines.push('- **要素指定**: `snapshot` → `ref` 番号で要素を指定');
   lines.push('- **最短経路優先**: skip 判定のステップはスキルに含めず、可能なら API を直接呼ぶ');
   lines.push('- **フロントマター**: `allowed-tools` はスキルファイルで非対応。`name` と `description` のみ記載すること');
@@ -99,11 +98,27 @@ export function buildBrief(
   lines.push('`playwright-cli` はローカルインストールのため、すべてのコマンドを `pnpm exec playwright-cli` で実行すること。');
   lines.push('API 呼び出しは `run-code` + `page.evaluate(() => fetch(...))` パターンを使用（詳細は `.claude/skills/playwright-cli/references/running-code.md` を参照）。');
   lines.push('');
-  lines.push('### 認証方式別の方針');
+  lines.push('### SSO 認証チェック');
   lines.push('');
-  lines.push('- **cookie / none**: API 直接呼び出し可。Cookie はブラウザから自動適用');
-  lines.push('- **bearer / basic**: UI フロー維持を推奨。API 直接呼び出しにはトークン/クレデンシャルの事前取得が必要');
+  lines.push('スキル実行開始時に以下の手順で SSO 認証状態を確認すること:');
+  lines.push('');
+  lines.push(`1. \`pnpm exec playwright-cli open --extension --profile="${config.automationProfileDir}"\` で AutomationProfile の Chrome に接続`);
+  lines.push(`2. 対象 URL にナビゲート（\`pnpm exec playwright-cli goto ${data.startUrl}\`）`);
+  lines.push('3. `pnpm exec playwright-cli snapshot` でページ状態を確認');
+  lines.push('4. SSO リダイレクト（ログインページへの遷移）を検出した場合:');
+  lines.push('   - `AskUserQuestion` でユーザーに「AutomationProfile の Chrome で手動 SSO 認証を完了してください」と依頼');
+  lines.push('   - ユーザーが認証完了を報告するまで待機');
+  lines.push(`   - 認証完了後、\`pnpm exec playwright-cli goto ${data.startUrl}\` で再ナビゲート`);
+  lines.push('5. 認証済みを確認できたら、自動操作を続行');
+  lines.push('');
+  lines.push('### 認証方式');
+  lines.push('');
+  lines.push('対象サイトは SSO 認証が前提。認証は AutomationProfile の Chrome セッションに依存する（1日有効）。');
+  lines.push('');
+  lines.push('- **cookie / none**: API 直接呼び出し可。SSO 認証後の Cookie がブラウザから自動適用される。`none` は認証不要なエンドポイント');
+  lines.push('- **bearer / basic**: SSO 認証後にブラウザが取得したトークン/クレデンシャルを利用。`run-code` + `page.evaluate()` でトークンを抽出し API 呼び出しに使用するか、UI フローを維持');
   lines.push('- **csrf**: CSRF トークン取得 → API 呼び出しの2段階。トークン取得元はブリーフの各ステップに記載');
+  lines.push('- **auth-state.json のロードは不要**: SSO トークンは日次で失効するため、保存した認証状態の再利用は行わない');
   lines.push('');
   lines.push('### フォーム入力');
   lines.push('');
@@ -126,10 +141,9 @@ export async function writeBrief(
   timestamp: string,
   data: RecordingData,
   result: ShortestPathResult,
-  authStatePath: string,
   recordingsDir: string,
 ): Promise<string> {
-  const content = buildBrief(taskName, timestamp, data, result, authStatePath);
+  const content = buildBrief(taskName, timestamp, data, result);
   const briefPath = path.join(recordingsDir, taskName, timestamp, 'analysis-brief.md');
   await fs.writeFile(briefPath, content, 'utf-8');
   return briefPath;

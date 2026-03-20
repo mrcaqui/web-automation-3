@@ -1,5 +1,26 @@
 # 進捗ログ
 
+## 2026-03-20
+
+#### 1. brief-builder 認証方式を SSO/AutomationProfile に移行 (v0.2.3)
+
+**Issue**
+
+- ブリーフ生成時に `auth-state.json` パスを参照していたが、SSO トークンは日次失効のため保存状態の再利用が不可能だった。AutomationProfile の Chrome セッションを利用する方式に統一する必要があった。
+
+**Changes**
+
+- `buildBrief()` / `writeBrief()` から `authStatePath` パラメータを削除。ブリーフの認証セクションを SSO 認証チェック手順（AutomationProfile 接続 → ナビゲート → SSO リダイレクト検出 → 手動認証依頼）に書き換え。
+- `config.ts` に `automationProfileDir` を追加（Chrome User Data パス）。`types.ts` に対応する型定義を追加。
+- `analyze.ts` から `authStatePath` の組み立てと `writeBrief` への引き渡しを削除。
+
+**Changed files**
+
+- `src/analyzer/brief-builder.ts`
+- `src/cli/analyze.ts`
+- `src/core/config.ts`
+- `src/core/types.ts`
+
 ## 2026-03-19
 
 #### 1. analyzer モジュール追加 — 最短経路最適化 & ブリーフ生成 (v0.2.0)

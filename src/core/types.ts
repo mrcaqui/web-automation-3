@@ -19,6 +19,7 @@ export interface WaConfig {
     goalMethods: string[];
     goalExcludePatterns: string[];  // テレメトリ/メトリクス系URLを goal 候補から除外するパターン
   };
+  automationProfileDir: string;  // AutomationProfile の Chrome User Data パス
   recordingsDir: string;
   skillsDir: string;
 }

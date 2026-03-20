@@ -103,10 +103,9 @@ export async function runAnalyze(name: string, recordingDir?: string): Promise<v
     console.log(chalk.dim(`  分類結果: api=${result.apiCount}, ui=${result.uiCount}, skip=${result.skippedCount}`));
 
     // ブリーフ生成
-    const authStatePath = path.join(config.recordingsDir, name, 'latest', 'auth-state.json');
     let briefPath: string;
     try {
-      briefPath = await writeBrief(name, timestamp, data, result, authStatePath, config.recordingsDir);
+      briefPath = await writeBrief(name, timestamp, data, result, config.recordingsDir);
     } catch (err) {
       console.error(chalk.red(`ブリーフの書き出しに失敗しました: ${err instanceof Error ? err.message : err}`));
       process.exitCode = 1;

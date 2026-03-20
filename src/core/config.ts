@@ -1,3 +1,5 @@
+import path from 'path';
+import os from 'os';
 import { WaConfig } from './types.js';
 
 export const config: WaConfig = {
@@ -33,6 +35,9 @@ export const config: WaConfig = {
       'capig.stape.jp/',     // サーバーサイドタグ
     ],
   },
+  automationProfileDir: path.join(
+    os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'AutomationProfile'
+  ),
   recordingsDir: './recordings',
   skillsDir: './.claude/skills',
 };
