@@ -1,6 +1,6 @@
 {
   "name": "web-automation-3",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "scripts": {
     "wa": "tsx src/cli/index.ts"
@@ -10,6 +10,7 @@
     "@playwright/cli": "^0.1.1",
     "chalk": "^5.4.0",
     "commander": "^13.0.0",
+    "exceljs": "^4.4.0",
     "list": "^2.0.19",
     "playwriter": "^0.0.62",
     "zod": "^3.23.0"

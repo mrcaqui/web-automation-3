@@ -1,5 +1,25 @@
 # 進捗ログ
 
+## 2026-03-21
+
+#### 1. SharePoint Excel → Shifts 一括インポート機能 (v0.2.4)
+
+**Issue**
+
+- シフトスケジュールは SharePoint 上の Excel ファイルに記載されており、毎月手動で Shifts に入力していた。Excel からの自動読み取り → Shifts API 一括登録を実現したい。
+
+**Changes**
+
+- `exceljs` を依存に追加。SharePoint `/_api/v2.0` の content API で xlsx バイナリを Cookie 認証で取得し、Node.js でメモリ上解析するパイプラインを構築。
+- `.claude/skills/shift/SKILL.md` に「Excel 一括インポート」セクションを追加: SharePoint 認証 → ダウンロード URL 取得 → curl + exceljs 解析 → 重複チェック → Shifts API 作成の手順を文書化。
+- Workbook API（OAuth 必須）、レガシー Excel REST（廃止済み）、DOM 読み取り（キャンバスベース不可）を検証した結果、ファイル取得 + exceljs 方式を採用。
+- `Oncall(B)`/`Oncall(C)` のみ `Reserved`（09:00〜翌09:00）として登録。`Oncall(A)` はスキップ。
+
+**Changed files**
+
+- `package.json`
+- `pnpm-lock.yaml`
+
 ## 2026-03-20
 
 #### 1. brief-builder 認証方式を SSO/AutomationProfile に移行 (v0.2.3)
