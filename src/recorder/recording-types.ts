@@ -43,16 +43,3 @@ export interface RecordingData {
     content: string;
   }>;
 }
-
-export interface PlaywrightStorageState {
-  cookies: Array<{
-    name: string; value: string; domain: string; path: string;
-    expires: number; httpOnly: boolean; secure: boolean; sameSite: string;
-    partitionKey?: string;
-    _crHasCrossSiteAncestor?: boolean;
-  }>;
-  origins: Array<{
-    origin: string;
-    localStorage: Array<{ name: string; value: string }>;
-  }>;
-}

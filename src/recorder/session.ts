@@ -3,8 +3,7 @@ import os from 'os';
 import path from 'path';
 import { PlaywriterClient } from '../core/playwriter-client.js';
 import { config } from '../core/config.js';
-import { RecordingData, PlaywrightStorageState } from './recording-types.js';
-import { exportAuthState } from './auth-exporter.js';
+import { RecordingData } from './recording-types.js';
 import {
   getResetStateScript,
   getActionRecorderScript,
@@ -72,16 +71,7 @@ export class RecordingSession {
       const collected = JSON.parse(await fs.readFile(tmpFile, 'utf-8'));
       await fs.unlink(tmpFile).catch(() => {});
 
-      // 4. 認証情報を取得
-      let authState: PlaywrightStorageState;
-      try {
-        authState = await exportAuthState(this.client);
-      } catch (error) {
-        console.error('[auth-exporter] Failed to export auth state:', error instanceof Error ? error.message : error);
-        throw error;
-      }
-
-      // 5. ファイル保存
+      // 4. ファイル保存
       const startUrl = this.startUrl || collected.actions?.[0]?.pageUrl || 'unknown';
       const data: RecordingData = {
         startTime: this.startTime,
@@ -100,7 +90,6 @@ export class RecordingSession {
         fs.writeFile(path.join(recordingDir, 'actions.json'), JSON.stringify(data.actions, null, 2)),
         fs.writeFile(path.join(recordingDir, 'requests.json'), JSON.stringify(data.requests, null, 2)),
         fs.writeFile(path.join(recordingDir, 'snapshots.json'), JSON.stringify(data.snapshots, null, 2)),
-        fs.writeFile(path.join(recordingDir, 'auth-state.json'), JSON.stringify(authState, null, 2)),
         fs.writeFile(path.join(recordingDir, 'metadata.json'), JSON.stringify({
           startTime: data.startTime,
           endTime: data.endTime,
@@ -108,20 +97,12 @@ export class RecordingSession {
         }, null, 2)),
       ]);
 
-      // 6. latest/ ディレクトリに auth-state.json をコピー
-      const latestDir = path.join(config.recordingsDir, this.name, 'latest');
-      await fs.mkdir(latestDir, { recursive: true });
-      await fs.copyFile(
-        path.join(recordingDir, 'auth-state.json'),
-        path.join(latestDir, 'auth-state.json'),
-      );
-
       return { recordingDir, data };
     } finally {
-      // 7. ネットワークリスナーを解除（stop() 内のいずれの失敗時も必ず実行）
+      // 5. ネットワークリスナーを解除（stop() 内のいずれの失敗時も必ず実行）
       await this.client.execute(getCleanupNetworkScript()).catch(() => {});
 
-      // 8. ブラウザ側のDOMリスナーを解除
+      // 6. ブラウザ側のDOMリスナーを解除
       await this.client.execute(getCleanupDomScript()).catch(() => {});
     }
   }
