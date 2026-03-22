@@ -6,7 +6,25 @@ import { RecordingData } from '../recorder/recording-types.js';
 import { classifyActions } from '../analyzer/shortest-path.js';
 import { writeBrief } from '../analyzer/brief-builder.js';
 
-export async function runAnalyze(name: string, recordingDir?: string): Promise<void> {
+export async function runAnalyze(name: string, recordingDir?: string, opts?: { tag?: string; dir?: string }): Promise<void> {
+  // バリデーション
+  if (opts?.tag && opts?.dir) {
+    console.error(chalk.red('エラー: --tag と --dir は同時に指定できません'));
+    process.exitCode = 1;
+    return;
+  }
+  if (opts?.tag && !/^[a-zA-Z0-9_-]+$/.test(opts.tag)) {
+    console.error(chalk.red('エラー: --tag には英数字・ハイフン・アンダースコアのみ使用できます'));
+    process.exitCode = 1;
+    return;
+  }
+  const recordingDirPattern = /^(?:[A-Za-z0-9_-]+-)?(\d{8}-\d{6})$/;
+  if (opts?.dir && (opts.dir.includes('..') || opts.dir.includes('/') || opts.dir.includes('\\') || !recordingDirPattern.test(opts.dir))) {
+    console.error(chalk.red('エラー: --dir には記録ディレクトリ名（例: 20260322-110420 または tag-20260322-110420）を指定してください'));
+    process.exitCode = 1;
+    return;
+  }
+
   try {
     let targetDir: string;
     let timestamp: string;
@@ -15,6 +33,11 @@ export async function runAnalyze(name: string, recordingDir?: string): Promise<v
       // --analyze フラグ経由: 直接パスを使用
       targetDir = recordingDir;
       timestamp = path.basename(recordingDir);
+    } else if (opts?.dir) {
+      // --dir 指定: 直接ディレクトリ名を使用
+      const taskDir = path.join(config.recordingsDir, name);
+      targetDir = path.join(taskDir, opts.dir);
+      timestamp = opts.dir;
     } else {
       // 手動実行: ディレクトリ走査で最新を選択
       const taskDir = path.join(config.recordingsDir, name);
@@ -27,19 +50,43 @@ export async function runAnalyze(name: string, recordingDir?: string): Promise<v
         return;
       }
 
-      const timestampPattern = /^\d{8}-\d{6}$/;
-      const timestamps = entries
-        .filter(e => timestampPattern.test(e))
-        .sort()
-        .reverse();
+      let filtered: string[];
+      if (opts?.tag) {
+        // タグ指定: ^<tag>-\d{8}-\d{6}$ でフィルタ
+        const escapedTag = escapeRegExp(opts.tag);
+        const tagPattern = new RegExp(`^${escapedTag}-\\d{8}-\\d{6}$`);
+        filtered = entries.filter(e => tagPattern.test(e));
+      } else {
+        // タグなし: 従来互換（タグなし記録のみ）
+        const timestampPattern = /^\d{8}-\d{6}$/;
+        filtered = entries.filter(e => timestampPattern.test(e));
+      }
 
-      if (timestamps.length === 0) {
+      // パース済みタイムスタンプでソート
+      filtered.sort((a, b) => {
+        const ta = parseTimestampDir(a);
+        const tb = parseTimestampDir(b);
+        return tb - ta;
+      });
+
+      if (filtered.length === 0) {
+        if (!opts?.tag) {
+          // タグなし記録が0件 → タグ付き記録の存在チェック
+          const taggedPattern = /^[A-Za-z0-9_-]+-\d{8}-\d{6}$/;
+          const hasTagged = entries.some(e => taggedPattern.test(e));
+          if (hasTagged) {
+            console.error(chalk.red(`"${name}" のタグなし記録が見つかりません。タグ付き記録のみ存在します。`));
+            console.error(chalk.yellow('`--tag <tag>` を指定してください。'));
+            process.exitCode = 1;
+            return;
+          }
+        }
         console.error(chalk.red(`"${name}" の記録データが見つかりません（${taskDir} 内にタイムスタンプディレクトリがありません）`));
         process.exitCode = 1;
         return;
       }
 
-      timestamp = timestamps[0];
+      timestamp = filtered[0];
       targetDir = path.join(taskDir, timestamp);
     }
 
@@ -125,9 +172,13 @@ export async function runAnalyze(name: string, recordingDir?: string): Promise<v
 }
 
 function parseTimestampDir(dirname: string): number {
-  // YYYYMMDD-HHmmss → Date
-  const match = dirname.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/);
+  // tag-YYYYMMDD-HHmmss or YYYYMMDD-HHmmss → Date
+  const match = dirname.match(/^(?:[A-Za-z0-9_-]+-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/);
   if (!match) return Date.now();
   const [, y, mo, d, h, mi, s] = match;
   return new Date(+y, +mo - 1, +d, +h, +mi, +s).getTime();
+}
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

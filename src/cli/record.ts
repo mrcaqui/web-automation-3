@@ -3,7 +3,13 @@ import { PlaywriterClient, ensurePlaywriterReady } from '../core/playwriter-clie
 import { RecordingSession } from '../recorder/session.js';
 import { runAnalyze } from './analyze.js';
 
-export async function runRecord(name: string, options: { url?: string; analyze?: boolean }): Promise<void> {
+export async function runRecord(name: string, options: { url?: string; analyze?: boolean; tag?: string }): Promise<void> {
+  if (options.tag && !/^[a-zA-Z0-9_-]+$/.test(options.tag)) {
+    console.error(chalk.red('エラー: --tag には英数字・ハイフン・アンダースコアのみ使用できます'));
+    process.exitCode = 1;
+    return;
+  }
+
   const client = new PlaywriterClient();
 
   try {
@@ -15,7 +21,7 @@ export async function runRecord(name: string, options: { url?: string; analyze?:
     console.log('');
 
     // 記録セッション開始
-    const session = new RecordingSession(client, name, options.url);
+    const session = new RecordingSession(client, name, options.url, options.tag);
     console.log(chalk.cyan(`記録 "${name}" を開始します...`));
     if (options.url) {
       console.log(chalk.dim(`ナビゲーション先: ${options.url}`));
@@ -43,7 +49,8 @@ export async function runRecord(name: string, options: { url?: string; analyze?:
       console.log(chalk.cyan('--analyze フラグにより自動分析を開始します...'));
       await runAnalyze(name, recordingDir);
     } else {
-      console.log(chalk.dim(`次のステップ: pnpm wa analyze ${name}`));
+      const tagOpt = options.tag ? ` --tag ${options.tag}` : '';
+      console.log(chalk.dim(`次のステップ: pnpm wa analyze ${name}${tagOpt}`));
     }
   } catch (error) {
     console.error(chalk.red('記録エラー:'), error instanceof Error ? error.message : error);

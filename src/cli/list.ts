@@ -12,8 +12,8 @@ interface TaskInfo {
 }
 
 function isTimestampDir(name: string): boolean {
-  // タイムスタンプ形式: YYYYMMDD-HHmmss など数字とハイフンのみ
-  return /^\d{8}-\d{6}$/.test(name);
+  // タイムスタンプ形式: YYYYMMDD-HHmmss またはタグ付き tag-YYYYMMDD-HHmmss
+  return /^(?:[A-Za-z0-9_-]+-)?(\d{8}-\d{6})$/.test(name);
 }
 
 function scanTasks(): TaskInfo[] {
@@ -34,7 +34,11 @@ function scanTasks(): TaskInfo[] {
     const timestampDirs = fs.readdirSync(taskPath, { withFileTypes: true })
       .filter(d => d.isDirectory() && isTimestampDir(d.name))
       .map(d => d.name)
-      .sort();
+      .sort((a, b) => {
+        const ta = parseTimestamp(a) ?? new Date(0);
+        const tb = parseTimestamp(b) ?? new Date(0);
+        return ta.getTime() - tb.getTime();
+      });
 
     if (timestampDirs.length === 0) continue;
 
@@ -82,8 +86,8 @@ function scanTasks(): TaskInfo[] {
 }
 
 function parseTimestamp(ts: string): Date | null {
-  // YYYYMMDD-HHmmss → Date
-  const match = ts.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/);
+  // tag-YYYYMMDD-HHmmss or YYYYMMDD-HHmmss → Date
+  const match = ts.match(/^(?:[A-Za-z0-9_-]+-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/);
   if (!match) return null;
   const [, y, mo, d, h, mi, s] = match;
   return new Date(+y, +mo - 1, +d, +h, +mi, +s);

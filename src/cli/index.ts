@@ -15,11 +15,14 @@ program.command('record <name>')
   .description('ブラウザ操作を記録する')
   .option('--url <url>', 'ナビゲーション先URL')
   .option('--analyze', '記録完了後に自動で分析を実行する')
+  .option('--tag <tag>', '記録にタグを付ける')
   .action(runRecord);
 
 program.command('analyze <name>')
   .description('記録を分析しanalysis-brief.mdを生成する（スキル生成はClaude Codeが担当）')
-  .action((name) => runAnalyze(name));
+  .option('--tag <tag>', 'タグで記録を絞り込む')
+  .option('--dir <dir>', '記録ディレクトリ名を直接指定する')
+  .action((name, opts) => runAnalyze(name, undefined, opts));
 
 program.command('list')
   .description('記録・スキル一覧を表示する')

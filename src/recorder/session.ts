@@ -20,11 +20,13 @@ export class RecordingSession {
   private name: string;
   private startUrl: string | undefined;
   private startTime = 0;
+  private tag?: string;
 
-  constructor(client: PlaywriterClient, name: string, startUrl?: string) {
+  constructor(client: PlaywriterClient, name: string, startUrl?: string, tag?: string) {
     this.client = client;
     this.name = name;
     this.startUrl = startUrl;
+    this.tag = tag;
   }
 
   async start(): Promise<void> {
@@ -83,7 +85,8 @@ export class RecordingSession {
       };
 
       const timestamp = formatTimestamp(this.startTime);
-      const recordingDir = path.join(config.recordingsDir, this.name, timestamp);
+      const dirName = this.tag ? `${this.tag}-${timestamp}` : timestamp;
+      const recordingDir = path.join(config.recordingsDir, this.name, dirName);
       await fs.mkdir(recordingDir, { recursive: true });
 
       await Promise.all([
