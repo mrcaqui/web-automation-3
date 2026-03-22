@@ -1,9 +1,3 @@
 node_modules/
 dist/
-recordings/*/
-.claude/
-.playwright-cli/
-.mcp.json
 *.log
-plans/
-docs/memo.md
