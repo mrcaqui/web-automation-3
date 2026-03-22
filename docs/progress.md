@@ -1,5 +1,22 @@
 # 進捗ログ
 
+## 2026-03-22
+
+#### 1. Concur スキル改善 & brief-builder クロスオリジン注意追加 (v0.2.5)
+
+**Issue**
+
+- Concur 経費精算の実行時に GraphQL API が 401 エラー（クロスオリジン Cookie 未送信）、Duplicate 後のエントリ ID 取得手順が未記載、編集時の Save Expense セレクタ不一致、SSO フローの冗長なナビゲーションなど複数の問題が発生した。
+
+**Changes**
+
+- `brief-builder.ts`: cookie 認証の説明にクロスオリジン制約の注意を追加。別サブドメインの API には `page.evaluate(() => fetch(...))` で Cookie が送信されず 401 になる旨を明記。
+- `.claude/skills/concur/SKILL.md`（git 管理外）: SSO フローを `concur.cisco.com` 開始に変更、GraphQL API 手順を全削除して UI に統一、Duplicate 後のエントリ ID 取得手順を追加、編集時の Save Expense セレクタを `.first()` に修正。
+
+**Changed files**
+
+- `src/analyzer/brief-builder.ts`
+
 ## 2026-03-21
 
 #### 1. SharePoint Excel → Shifts 一括インポート機能 (v0.2.4)

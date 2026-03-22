@@ -104,10 +104,15 @@ export function buildBrief(
   lines.push('');
   lines.push(`1. \`pnpm exec playwright-cli open --extension --profile="${config.automationProfileDir}"\` で AutomationProfile の Chrome に接続`);
   lines.push(`2. 対象 URL にナビゲート（\`pnpm exec playwright-cli goto ${data.startUrl}\`）`);
-  lines.push('3. `pnpm exec playwright-cli snapshot` でページ状態を確認');
-  lines.push('4. SSO リダイレクト（ログインページへの遷移）を検出した場合:');
-  lines.push('   - `AskUserQuestion` でユーザーに「AutomationProfile の Chrome で手動 SSO 認証を完了してください」と依頼');
-  lines.push('   - ユーザーが認証完了を報告するまで待機');
+  lines.push('3. ページ URL を確認（`pnpm exec playwright-cli run-code "async page => { return page.url(); }"`）');
+  lines.push('4. URL による分岐:');
+  lines.push('   - 対象サイトの URL を含む → 認証済み。操作を続行');
+  lines.push('   - `duosecurity.com` または `signin` を含む → SSO が必要な可能性:');
+  lines.push('     - URL が `email_first` を含む場合（メールアドレス入力画面）→ `AskUserQuestion` で手動 SSO 認証を依頼');
+  lines.push('     - それ以外（認証済みで自動遷移中の可能性）→ 5秒待機して URL を再確認:');
+  lines.push('       `pnpm exec playwright-cli run-code "async page => { await page.waitForTimeout(5000); return page.url(); }"`');
+  lines.push('     - 待機後に対象サイトの URL を含む → 認証済み。操作を続行');
+  lines.push('     - まだ認証ページ → `AskUserQuestion` で手動 SSO 認証を依頼');
   lines.push(`   - 認証完了後、\`pnpm exec playwright-cli goto ${data.startUrl}\` で再ナビゲート`);
   lines.push('5. 認証済みを確認できたら、自動操作を続行');
   lines.push('');
@@ -115,7 +120,7 @@ export function buildBrief(
   lines.push('');
   lines.push('対象サイトは SSO 認証が前提。認証は AutomationProfile の Chrome セッションに依存する（1日有効）。');
   lines.push('');
-  lines.push('- **cookie / none**: API 直接呼び出し可。SSO 認証後の Cookie がブラウザから自動適用される。`none` は認証不要なエンドポイント');
+  lines.push('- **cookie / none**: 同一オリジンの API であれば直接呼び出し可。SSO 認証後の Cookie がブラウザから自動適用される。**API が別サブドメインの場合はクロスオリジン制約で Cookie が送信されず 401 になるため、UI 操作を使用すること。** `none` は認証不要なエンドポイント');
   lines.push('- **bearer / basic**: SSO 認証後にブラウザが取得したトークン/クレデンシャルを利用。`run-code` + `page.evaluate()` でトークンを抽出し API 呼び出しに使用するか、UI フローを維持');
   lines.push('- **csrf**: CSRF トークン取得 → API 呼び出しの2段階。トークン取得元はブリーフの各ステップに記載');
   lines.push('- **auth-state.json のロードは不要**: SSO トークンは日次で失効するため、保存した認証状態の再利用は行わない');
