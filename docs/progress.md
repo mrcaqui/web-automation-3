@@ -17,6 +17,23 @@
 
 - `src/analyzer/brief-builder.ts`
 
+#### 2. Concur スキル SSO 簡素化 & 社内情報ガイドライン追加 (v0.2.6)
+
+**Issue**
+
+- Concur SSO 認証チェックが `goto` + `run-code` の2コマンドに分かれており冗長だった。Duplicate 手順も全 listitem をループして ID 取得する方式で不安定だった。
+- GitHub にも push されるファイルに社内情報を記載しないルールが CLAUDE.md に未記載だった。
+
+**Changes**
+
+- `.claude/skills/concur/SKILL.md`: SSO 認証チェックを `run-code` 内で `page.goto()` + `waitForURL` に統合し、ステップ数を 7→6 に削減。Duplicate 手順を `listitem.filter({ hasText: duplicateDate })` による日付テキスト特定方式に簡素化し、`duplicateDate` パラメータを追加。
+- `CLAUDE.md`: 社内情報の取り扱いガイドラインを追加（GitHub 公開ファイルに社名・社内 URL 等を記載しない、`export-ignore` ファイルは制約なし）。
+
+**Changed files**
+
+- `.claude/skills/concur/SKILL.md`
+- `CLAUDE.md`
+
 ## 2026-03-21
 
 #### 1. SharePoint Excel → Shifts 一括インポート機能 (v0.2.4)
