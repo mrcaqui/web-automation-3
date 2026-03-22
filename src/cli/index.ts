@@ -4,6 +4,7 @@ import { runStatus } from './status.js';
 import { runRecord } from './record.js';
 import { runAnalyze } from './analyze.js';
 import { runList } from './list.js';
+import { runShiftExcel } from './shift-excel.js';
 
 const program = new Command();
 program
@@ -27,5 +28,10 @@ program.command('list')
 program.command('status')
   .description('Playwriter接続状態を確認する')
   .action(runStatus);
+
+program.command('shift-excel <sheet> <member>')
+  .description('シフト表 Excel を解析し、メンバーの上段行・下段行の値を JSON で出力する')
+  .option('--file <path>', 'Excel ファイルパス', '.claude/skills/shift/shift.xlsx')
+  .action((sheet, member, opts) => runShiftExcel(sheet, member, opts));
 
 program.parseAsync().then(() => process.exit(process.exitCode ?? 0)).catch(() => process.exit(1));
