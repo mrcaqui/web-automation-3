@@ -30,6 +30,11 @@ export interface RecordedRequest {
   };
 }
 
+export interface RecordedComment {
+  timestamp: number;
+  text: string;
+}
+
 export interface RecordingData {
   startTime: number;
   endTime: number;
@@ -42,4 +47,5 @@ export interface RecordingData {
     pageUrl: string;
     content: string;
   }>;
+  comments: RecordedComment[];
 }

@@ -19,6 +19,7 @@ export function buildBrief(
   lines.push(`totalActions: ${result.classified.length}`);
   lines.push(`goalRequests: ${result.goalRequests.length}`);
   lines.push(`skippedActions: ${result.skippedCount}`);
+  lines.push(`userComments: ${data.comments.length}`);
   lines.push('---');
   lines.push('');
 
@@ -30,6 +31,9 @@ export function buildBrief(
   lines.push(`- **開始URL**: ${data.startUrl}`);
   lines.push(`- **総操作数**: ${result.classified.length}`);
   lines.push(`- **分類**: api=${result.apiCount}, ui=${result.uiCount}, skip=${result.skippedCount}`);
+  if (data.comments.length > 0) {
+    lines.push(`- **ユーザーコメント数**: ${data.comments.length}`);
+  }
   lines.push('');
 
   // --- 最短経路最適化の結果 ---
@@ -61,8 +65,18 @@ export function buildBrief(
   lines.push('## ステップ詳細');
   lines.push('');
 
+  const sortedComments = data.comments.slice().sort((a, b) => a.timestamp - b.timestamp);
+  let commentIdx = 0;
+
   let stepNum = 0;
   for (const c of result.classified) {
+    // このアクション以前のコメントを挿入
+    while (commentIdx < sortedComments.length && sortedComments[commentIdx].timestamp <= c.action.timestamp) {
+      lines.push(`> **ユーザーコメント** (${formatDate(sortedComments[commentIdx].timestamp)}): ${sortedComments[commentIdx].text}`);
+      lines.push('');
+      commentIdx++;
+    }
+
     stepNum++;
     lines.push(`### ステップ ${stepNum} [${c.classification}]`);
     lines.push('');
@@ -78,6 +92,13 @@ export function buildBrief(
     } else if (c.classification === 'api') {
       renderApiStep(lines, c, data);
     }
+  }
+
+  // 最後のステップ以降のコメントを挿入
+  while (commentIdx < sortedComments.length) {
+    lines.push(`> **ユーザーコメント** (${formatDate(sortedComments[commentIdx].timestamp)}): ${sortedComments[commentIdx].text}`);
+    lines.push('');
+    commentIdx++;
   }
 
   // --- スキルファイル生成指示 ---

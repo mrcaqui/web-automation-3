@@ -28,7 +28,7 @@ export async function runRecord(name: string, options: { url?: string; analyze?:
     }
     await session.start();
     console.log(chalk.green('記録中。ブラウザで操作してください。'));
-    console.log(chalk.yellow('Enter キーを押すと記録を停止します。'));
+    console.log(chalk.yellow('コメントを入力できます。q で停止 / /list, /del <n>, /edit <n> <text> でコメント管理'));
     console.log('');
 
     // Enter キー待機
@@ -43,6 +43,7 @@ export async function runRecord(name: string, options: { url?: string; analyze?:
     console.log(`  アクション数: ${data.actions.length}`);
     console.log(`  リクエスト数: ${data.requests.length}`);
     console.log(`  スナップショット数: ${data.snapshots.length}`);
+    console.log(`  コメント数: ${data.comments.length}`);
     console.log('');
 
     if (options.analyze) {

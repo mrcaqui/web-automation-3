@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import chalk from 'chalk';
 import { config } from '../core/config.js';
-import { RecordingData } from '../recorder/recording-types.js';
+import { RecordingData, RecordedComment } from '../recorder/recording-types.js';
 import { classifyActions } from '../analyzer/shortest-path.js';
 import { writeBrief } from '../analyzer/brief-builder.js';
 
@@ -134,7 +134,16 @@ export async function runAnalyze(name: string, recordingDir?: string, opts?: { t
       startUrl = actions[0]?.pageUrl || 'unknown';
     }
 
-    const data: RecordingData = { startTime, endTime, startUrl, actions, requests, snapshots };
+    // comments.json 読み込み（旧記録の ENOENT のみ許容）
+    let comments: RecordedComment[] = [];
+    const commentsPath = path.join(targetDir, 'comments.json');
+    try {
+      comments = JSON.parse(await fs.readFile(commentsPath, 'utf-8'));
+    } catch (err: any) {
+      if (err?.code !== 'ENOENT') throw err;
+    }
+
+    const data: RecordingData = { startTime, endTime, startUrl, actions, requests, snapshots, comments };
 
     // 分析設定
     const analysis = config.analysis;

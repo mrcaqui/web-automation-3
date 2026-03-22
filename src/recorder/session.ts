@@ -1,9 +1,11 @@
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
+import readline from 'node:readline';
+import chalk from 'chalk';
 import { PlaywriterClient } from '../core/playwriter-client.js';
 import { config } from '../core/config.js';
-import { RecordingData } from './recording-types.js';
+import { RecordingData, RecordedComment } from './recording-types.js';
 import {
   getResetStateScript,
   getActionRecorderScript,
@@ -21,6 +23,7 @@ export class RecordingSession {
   private startUrl: string | undefined;
   private startTime = 0;
   private tag?: string;
+  private comments: RecordedComment[] = [];
 
   constructor(client: PlaywriterClient, name: string, startUrl?: string, tag?: string) {
     this.client = client;
@@ -51,10 +54,75 @@ export class RecordingSession {
     return new Promise<void>((resolve) => {
       process.stdin.setRawMode?.(false);
       process.stdin.resume();
-      process.stdin.once('data', () => {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+      let resolved = false;
+      const teardown = () => {
+        if (resolved) return;
+        resolved = true;
+        rl.close();
+        process.stdin.pause();
         resolve();
+      };
+
+      rl.on('close', teardown);
+      rl.on('line', (line: string) => {
+        const trimmed = line.trim();
+        if (trimmed === 'q') {
+          teardown();
+          return;
+        }
+        if (trimmed === '/list') {
+          this.printComments();
+          return;
+        }
+        const delMatch = trimmed.match(/^\/del\s+(\d+)$/);
+        if (delMatch) {
+          this.deleteComment(parseInt(delMatch[1], 10));
+          return;
+        }
+        const editMatch = trimmed.match(/^\/edit\s+(\d+)\s+(.+)$/);
+        if (editMatch) {
+          this.editComment(parseInt(editMatch[1], 10), editMatch[2]);
+          return;
+        }
+        if (trimmed === '') return;
+        this.comments.push({ timestamp: Date.now(), text: trimmed });
+        const idx = this.comments.length;
+        console.log(chalk.cyan(`  [${idx}] コメント記録 (${new Date().toLocaleTimeString()}): ${trimmed}`));
       });
     });
+  }
+
+  private printComments(): void {
+    if (this.comments.length === 0) {
+      console.log(chalk.dim('  コメントはありません'));
+      return;
+    }
+    for (let i = 0; i < this.comments.length; i++) {
+      const c = this.comments[i];
+      const time = new Date(c.timestamp).toLocaleTimeString();
+      console.log(chalk.dim(`  [${i + 1}] (${time}) ${c.text}`));
+    }
+  }
+
+  private deleteComment(num: number): void {
+    if (num < 1 || num > this.comments.length) {
+      console.log(chalk.red(`  エラー: コメント番号 ${num} は存在しません (1-${this.comments.length})`));
+      return;
+    }
+    const removed = this.comments.splice(num - 1, 1)[0];
+    console.log(chalk.yellow(`  削除: [${num}] ${removed.text}`));
+  }
+
+  private editComment(num: number, newText: string): void {
+    if (num < 1 || num > this.comments.length) {
+      console.log(chalk.red(`  エラー: コメント番号 ${num} は存在しません (1-${this.comments.length})`));
+      return;
+    }
+    const old = this.comments[num - 1].text;
+    this.comments[num - 1].text = newText;
+    console.log(chalk.cyan(`  修正: [${num}] ${old} → ${newText}`));
   }
 
   async stop(): Promise<{ recordingDir: string; data: RecordingData }> {
@@ -82,6 +150,7 @@ export class RecordingSession {
         actions: collected.actions || [],
         requests: collected.requests || [],
         snapshots: collected.snapshots || [],
+        comments: this.comments,
       };
 
       const timestamp = formatTimestamp(this.startTime);
@@ -93,6 +162,7 @@ export class RecordingSession {
         fs.writeFile(path.join(recordingDir, 'actions.json'), JSON.stringify(data.actions, null, 2)),
         fs.writeFile(path.join(recordingDir, 'requests.json'), JSON.stringify(data.requests, null, 2)),
         fs.writeFile(path.join(recordingDir, 'snapshots.json'), JSON.stringify(data.snapshots, null, 2)),
+        fs.writeFile(path.join(recordingDir, 'comments.json'), JSON.stringify(data.comments, null, 2)),
         fs.writeFile(path.join(recordingDir, 'metadata.json'), JSON.stringify({
           startTime: data.startTime,
           endTime: data.endTime,
