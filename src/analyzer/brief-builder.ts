@@ -109,7 +109,7 @@ export function buildBrief(
   lines.push(`- **生成先**: \`.claude/skills/${taskName}/SKILL.md\``);
   lines.push('- **ベーススキル**: `playwright-cli` スキル（`.claude/skills/playwright-cli/SKILL.md`）を使用してブラウザ操作を実行');
   lines.push(`- **認証**: \`--extension\` モードで AutomationProfile の Chrome に接続（SSO 認証済みセッションを利用）`);
-  lines.push('- **要素指定**: `snapshot` → `ref` 番号で要素を指定');
+  lines.push('- **要素指定**: 安定セレクタ（`data-automation-id`, `getByRole`, `getByLabel` 等）があれば `run-code` で直接指定する。snapshot は DOM 全体を読み込みコンテキストを大量消費するため、安定セレクタが使えない場合のフォールバックとして利用する');
   lines.push('- **最短経路優先**: skip 判定のステップはスキルに含めず、可能なら API を直接呼ぶ');
   lines.push('- **フロントマター**: `allowed-tools` はスキルファイルで非対応。`name` と `description` のみ記載すること');
   lines.push('');
@@ -156,7 +156,22 @@ export function buildBrief(
   lines.push('');
   lines.push('### run-code の記述');
   lines.push('');
-  lines.push('`run-code` のコードはシェル解析エラーを避けるため、必ずシングルライン（1行）で記述すること。');
+  lines.push('- `run-code` のコードはシェル解析エラーを避けるため、必ずシングルライン（1行）で記述すること');
+  lines.push('- 各 `run-code` は **1〜2操作に留める**。複数操作を1つの `run-code` に詰め込まない');
+  lines.push('- 連続操作は複数の短い `run-code` を列挙し、1回の Bash 実行で順次実行する');
+  lines.push('- 待機が必要な場合は `sleep N` を挟むか、`run-code` 内の `waitForLoadState` を使う');
+  lines.push('');
+  lines.push('例（Good — 短い run-code を列挙）:');
+  lines.push('```bash');
+  lines.push('pnpm exec playwright-cli run-code "async page => { await page.locator(\'[data-automation-id=\\"menuButton\\"]\').click(); }"');
+  lines.push('sleep 1');
+  lines.push('pnpm exec playwright-cli run-code "async page => { await page.getByRole(\'link\', { name: \'ページ名\' }).click(); await page.waitForLoadState(\'networkidle\'); }"');
+  lines.push('```');
+  lines.push('');
+  lines.push('例（Bad — 1つの run-code に詰め込む）:');
+  lines.push('```bash');
+  lines.push('pnpm exec playwright-cli run-code "async page => { await page.locator(\'[data-automation-id=\\"menuButton\\"]\').click(); await page.waitForTimeout(1000); await page.getByRole(\'link\', { name: \'ページ名\' }).click(); await page.waitForLoadState(\'networkidle\'); return \'done\'; }"');
+  lines.push('```');
   lines.push('');
 
   return lines.join('\n');

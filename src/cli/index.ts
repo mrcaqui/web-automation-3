@@ -5,6 +5,7 @@ import { runRecord } from './record.js';
 import { runAnalyze } from './analyze.js';
 import { runList } from './list.js';
 import { runShiftExcel } from './shift-excel.js';
+import { runShiftDownload } from './shift-download.js';
 
 const program = new Command();
 program
@@ -31,6 +32,11 @@ program.command('list')
 program.command('status')
   .description('Playwriter接続状態を確認する')
   .action(runStatus);
+
+program.command('shift-download')
+  .description('シフト表 Excel の存在確認またはダウンロード')
+  .option('--url <url>', 'SharePoint ダウンロード URL（指定時はダウンロード実行）')
+  .action((opts) => runShiftDownload(opts));
 
 program.command('shift-excel <sheet> <member>')
   .description('シフト表 Excel を解析し、メンバーの上段行・下段行の値を JSON で出力する')
