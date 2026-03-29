@@ -1,6 +1,6 @@
 {
   "name": "web-automation-3",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "type": "module",
   "scripts": {
     "wa": "tsx src/cli/index.ts"

@@ -108,7 +108,7 @@ export function buildBrief(
   lines.push('');
   lines.push(`- **生成先**: \`.claude/skills/${taskName}/SKILL.md\``);
   lines.push(`- **対象 URL**: \`${data.startUrl}\``);
-  lines.push(`- **プロファイル**: \`${config.automationProfileDir}\``);
+  lines.push(`- **ブラウザ接続**: \`pnpm wa chrome\` で起動コマンドを確認`);
 
   return lines.join('\n');
 }

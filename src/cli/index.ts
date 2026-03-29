@@ -6,6 +6,7 @@ import { runAnalyze } from './analyze.js';
 import { runList } from './list.js';
 import { runShiftExcel } from './shift-excel.js';
 import { runShiftDownload } from './shift-download.js';
+import { runChrome } from './chrome.js';
 
 const program = new Command();
 program
@@ -30,8 +31,13 @@ program.command('list')
   .action(runList);
 
 program.command('status')
-  .description('Playwriter接続状態を確認する')
+  .description('セッション状態を確認する')
   .action(runStatus);
+
+program.command('chrome')
+  .description('ブラウザ起動方法の表示とセッション停止')
+  .option('--stop', 'Chrome を停止する')
+  .action(runChrome);
 
 program.command('shift-download')
   .description('シフト表 Excel の存在確認またはダウンロード')
@@ -43,4 +49,7 @@ program.command('shift-excel <sheet> <member>')
   .option('--file <path>', 'Excel ファイルパス', '.claude/skills/shift/shift.xlsx')
   .action((sheet, member, opts) => runShiftExcel(sheet, member, opts));
 
-program.parseAsync().then(() => process.exit(process.exitCode ?? 0)).catch(() => process.exit(1));
+program.parseAsync().then(() => process.exit(process.exitCode ?? 0)).catch((e) => {
+  console.error(e instanceof Error ? e.message : e);
+  process.exit(1);
+});
