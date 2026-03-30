@@ -5,6 +5,5 @@ dist/
 .playwright/
 **/auth-state.json
 playwright-cli.json
-.tmp-*
 wd-loop/.timer
 wd-loop/.pid
