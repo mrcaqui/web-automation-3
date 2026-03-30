@@ -87,10 +87,77 @@ DFM 日はないためサブフロー E はスキップ。
 
 ```bash
 START=$(date +%s)
-timeout 600 claude -p "$(cat .tmp-prompt.txt)" --dangerously-skip-permissions --no-session-persistence --model sonnet > wd-loop/run.log 2>&1
+claude -p "$(cat .tmp-prompt.txt)" --dangerously-skip-permissions --no-session-persistence --model sonnet --output-format stream-json --verbose > wd-loop/run.log 2>&1 &
+CLAUDE_PID=$!
+echo $CLAUDE_PID > wd-loop/.pid
+wait $CLAUDE_PID
+rm -f wd-loop/.pid
 ```
 
-タイムアウト（10分）を超えた場合は失敗扱い。
+- `--output-format stream-json` — 各イベント（ツール呼び出し・結果・応答）を JSONL で逐次出力。実行中もリアルタイムで記録される。
+- `--verbose` — stream-json に必要。
+- `wd-loop/.pid` にサブプロセスの PID を保存し、完了後に削除する。
+
+### ステップ 1.5: ログ分析
+
+実験完了後、run.log の JSONL を解析してタイミングサマリーを生成する:
+
+```bash
+node -e "
+const fs = require('fs');
+const lines = fs.readFileSync('wd-loop/run.log','utf8').trim().split('\n');
+const events = lines.map(l => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean);
+const calls = {};
+const results = [];
+let t0 = null;
+for (const ev of events) {
+  if (ev.type === 'assistant' && ev.message?.content) {
+    for (const c of ev.message.content) {
+      if (c.type === 'tool_use') calls[c.id] = { name: c.name, desc: (c.input?.description || c.input?.command || c.input?.file_path || '').slice(0,70) };
+    }
+  }
+  if (ev.type === 'user' && ev.timestamp) {
+    const ts = new Date(ev.timestamp).getTime();
+    if (!t0) t0 = ts;
+    const toolId = ev.message?.content?.[0]?.tool_use_id;
+    if (toolId && calls[toolId]) {
+      results.push({ ...calls[toolId], elapsed: (ts - t0) / 1000 });
+    }
+  }
+  if (ev.type === 'result') {
+    const total = (ev.duration_ms / 1000).toFixed(0);
+    const api = (ev.duration_api_ms / 1000).toFixed(0);
+    console.log('Total: ' + total + 's (API: ' + api + 's) Turns: ' + ev.num_turns + ' Cost: \$' + (ev.total_cost_usd||0).toFixed(3));
+  }
+}
+for (let i = results.length - 1; i > 0; i--) results[i].step = results[i].elapsed - results[i-1].elapsed;
+if (results.length) results[0].step = results[0].elapsed;
+console.log('\nTimeline:');
+for (const r of results) {
+  const flag = (r.step || 0) > 10 ? ' *' : '';
+  console.log('  [' + r.elapsed.toFixed(0) + 's] ' + r.name + ': ' + r.desc + ' (' + (r.step||0).toFixed(1) + 's)' + flag);
+}
+console.log('\nSlowest:');
+[...results].sort((a,b) => (b.step||0) - (a.step||0)).slice(0,5).forEach(r =>
+  console.log('  ' + (r.step||0).toFixed(1) + 's  ' + r.name + ': ' + r.desc));
+"
+```
+
+出力例:
+```
+Total: 185s (API: 42s) Turns: 12 Cost: $0.230
+
+Timeline:
+  [3s]  Bash: playwright-cli goto ... (3.0s)
+  [16s] Bash: playwright-cli run-code ... (13.0s) *
+  [28s] Bash: playwright-cli run-code ... (12.0s) *
+
+Slowest:
+  13.0s  Bash: playwright-cli run-code ...
+  12.0s  Bash: playwright-cli run-code ...
+```
+
+このサマリーを次の最適化アイデアの根拠として使う。`result` イベントの `duration_api_ms` は results.tsv の `api_sec` 列に記録する。
 
 ### ステップ 2: 検証
 
@@ -106,7 +173,7 @@ pnpm exec playwright-cli run-code "$(tr '\n' ' ' < wd-loop/verify.js)"
 - `hwCount`: 勤務日17日 × 3（午前・休憩・午後）= 51
 - `ocCount`: Oncall 2日 × 2（当日 + 翌日）= 4
 
-検証が失敗（期待値と不一致）した場合は、 `tail -n 50 wd-loop/run.log` でエラーを確認する。
+検証が失敗（期待値と不一致）した場合は、run.log の JSONL からエラーイベントを確認する（ステップ 1.5 のサマリーも参照）。
 
 ### ステップ 3: クリーンアップ
 
@@ -133,26 +200,27 @@ pnpm exec playwright-cli run-code "$(tr '\n' ' ' < wd-loop/verify.js)"
 ヘッダ行と列:
 
 ```
-commit	time_sec	hw_count	oc_count	expected_hw	expected_oc	status	description
+commit	time_sec	api_sec	hw_count	oc_count	expected_hw	expected_oc	status	description
 ```
 
 1. git commit hash（短縮7文字）
 2. 計測時間（秒）— クラッシュ/タイムアウト時は 0
-3. verify.js の hwCount — クラッシュ時は 0
-4. verify.js の ocCount — クラッシュ時は 0
-5. 期待 hwCount
-6. 期待 ocCount
-7. status: `keep`, `discard`, `fail`, `crash`
-8. この実験で試した内容の短い説明
+3. API 時間（秒）— run.log の `result` イベントの `duration_api_ms` から算出。クラッシュ時は 0
+4. verify.js の hwCount — クラッシュ時は 0
+5. verify.js の ocCount — クラッシュ時は 0
+6. 期待 hwCount
+7. 期待 ocCount
+8. status: `keep`, `discard`, `fail`, `crash`
+9. この実験で試した内容の短い説明
 
 例:
 
 ```
-commit	time_sec	hw_count	oc_count	expected_hw	expected_oc	status	description
-a1b2c3d	245	51	4	51	4	keep	baseline
-b2c3d4e	198	51	4	51	4	keep	reduce waitForTimeout to 200ms
-c3d4e5f	0	0	0	51	4	crash	removed all waits (timeouts)
-d4e5f6g	210	51	4	51	4	discard	combine subflow A blocks
+commit	time_sec	api_sec	hw_count	oc_count	expected_hw	expected_oc	status	description
+a1b2c3d	245	42	51	4	51	4	keep	baseline
+b2c3d4e	198	38	51	4	51	4	keep	reduce waitForTimeout to 200ms
+c3d4e5f	0	0	0	0	51	4	crash	removed all waits (timeouts)
+d4e5f6g	210	40	51	4	51	4	discard	combine subflow A blocks
 ```
 
 ## 実験ループ
@@ -162,7 +230,10 @@ d4e5f6g	210	51	4	51	4	discard	combine subflow A blocks
 **LOOP FOREVER:**
 
 1. git の状態を確認: 現在のブランチ/コミット
-2. `.claude/skills/wd/SKILL.md` を読み、最適化アイデアを考える
+2. `.claude/skills/wd/SKILL.md` を読み、前回のログ分析サマリー（ステップ 1.5）を参考に最適化アイデアを考える
+   - Playwright 操作（run-code）が遅い → run-code 統合、waitForTimeout 削減
+   - API 時間が長い → SKILL.md を短縮して token 処理時間を削減
+   - 特定サブフローが支配的 → そのサブフローに集中
 3. SKILL.md を修正する
 4. `git commit` する
 5. 実験を実行（上記「実行手順」のステップ 1〜4）
@@ -176,7 +247,15 @@ d4e5f6g	210	51	4	51	4	discard	combine subflow A blocks
 
 完全に自律的な研究者として動作する。うまくいけば keep、いかなければ discard。ブランチを進めながらイテレーションする。
 
-**タイムアウト**: 各実験は最大10分。超えたら kill して失敗扱い。
+**タイムアウト**: 各実験は最大10分。`wd-loop/.pid` から PID を読み取り、プロセスツリーごと停止する:
+
+```bash
+if [ -f wd-loop/.pid ]; then
+  PID=$(cat wd-loop/.pid)
+  taskkill //PID $PID //T //F 2>/dev/null
+  rm -f wd-loop/.pid
+fi
+```
 
 **クラッシュ**: サブプロセスがクラッシュした場合、判断する: 簡単に直せるバグ（typo、import 漏れ）なら修正して再実行。根本的に壊れたアイデアならスキップして次へ。
 
@@ -197,3 +276,33 @@ d4e5f6g	210	51	4	51	4	discard	combine subflow A blocks
 **Tier 3（高リスク、大きな変更）**:
 7. 全週のクイック追加を 1 run-code 内でループ化（週ごとにメニュー開閉しない）
 8. 全フロー（サブフロー A → B → F）を 1 つの大きな run-code に統合
+
+## 実験の手動停止
+
+ユーザーが実験を手動で停止したい場合の方法:
+
+### 方法 1: PID ファイルを使う（推奨）
+
+実験中は `wd-loop/.pid` にサブプロセスの PID が保存される。
+
+**PowerShell**:
+```powershell
+$pid = Get-Content wd-loop\.pid
+Stop-Process -Id $pid -Force
+```
+
+**コマンドプロンプト / Git Bash**:
+```bash
+taskkill //PID $(cat wd-loop/.pid) //T //F
+```
+
+### 方法 2: コマンドラインで特定して停止
+
+**PowerShell**:
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='claude.exe'" |
+  Where-Object { $_.CommandLine -match ' -p ' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```
+
+`wd-loop/.pid` が存在しない場合（異常終了等）はこちらを使う。
