@@ -7,3 +7,4 @@ dist/
 playwright-cli.json
 wd-loop/.timer
 wd-loop/.pid
+tmp/
