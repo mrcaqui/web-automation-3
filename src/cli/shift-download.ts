@@ -1,15 +1,17 @@
 import { existsSync, statSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { writeFile } from 'node:fs/promises';
 
-const SHIFT_FILE = '.claude/skills/shift/shift.xlsx';
+const SHIFT_FILE = '.agents/skills/shift/shift.xlsx';
 
 export async function runShiftDownload(opts: { url?: string }) {
   if (opts.url) {
-    // Download mode: fetch from the given URL
     try {
-      execSync(`curl -sL -o "${SHIFT_FILE}" "${opts.url}"`, {
-        stdio: 'inherit',
-      });
+      const response = await fetch(opts.url);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      }
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      await writeFile(SHIFT_FILE, bytes);
       const stat = statSync(SHIFT_FILE);
       console.log(
         JSON.stringify({

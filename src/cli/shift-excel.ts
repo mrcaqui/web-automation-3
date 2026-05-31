@@ -16,7 +16,7 @@ export async function runShiftExcel(
   member: string,
   opts: { file?: string },
 ) {
-  const filePath = opts.file ?? '.claude/skills/shift/shift.xlsx';
+  const filePath = opts.file ?? '.agents/skills/shift/shift.xlsx';
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(filePath);
 
