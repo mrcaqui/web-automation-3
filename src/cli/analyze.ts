@@ -250,7 +250,7 @@ export async function runAnalyze(
     console.log("");
     console.log(
       chalk.dim(
-        "次のステップ: Claude Code でこのファイルを読んでスキルを生成してください:",
+        "次のステップ: Codex でこのファイルを読んでスキルを生成してください:",
       ),
     );
     console.log(

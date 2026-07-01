@@ -1,7 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-
-const SHIFT_FILE = '.agents/skills/shift/shift.xlsx';
+import { DEFAULT_SHIFT_FILE } from './shift-path.js';
 
 export async function runShiftDownload(opts: { url?: string }) {
   if (opts.url) {
@@ -11,12 +10,12 @@ export async function runShiftDownload(opts: { url?: string }) {
         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
       }
       const bytes = new Uint8Array(await response.arrayBuffer());
-      await writeFile(SHIFT_FILE, bytes);
-      const stat = statSync(SHIFT_FILE);
+      await writeFile(DEFAULT_SHIFT_FILE, bytes);
+      const stat = statSync(DEFAULT_SHIFT_FILE);
       console.log(
         JSON.stringify({
           status: 'downloaded',
-          path: SHIFT_FILE,
+          path: DEFAULT_SHIFT_FILE,
           size: stat.size,
           modified: stat.mtime.toISOString(),
         }),
@@ -29,17 +28,17 @@ export async function runShiftDownload(opts: { url?: string }) {
   }
 
   // Check mode: report existing file status
-  if (existsSync(SHIFT_FILE)) {
-    const stat = statSync(SHIFT_FILE);
+  if (existsSync(DEFAULT_SHIFT_FILE)) {
+    const stat = statSync(DEFAULT_SHIFT_FILE);
     console.log(
       JSON.stringify({
         status: 'exists',
-        path: SHIFT_FILE,
+        path: DEFAULT_SHIFT_FILE,
         size: stat.size,
         modified: stat.mtime.toISOString(),
       }),
     );
   } else {
-    console.log(JSON.stringify({ status: 'not_found', path: SHIFT_FILE }));
+    console.log(JSON.stringify({ status: 'not_found', path: DEFAULT_SHIFT_FILE }));
   }
 }

@@ -6,7 +6,7 @@ import { ClassifiedAction, ShortestPathResult } from '../core/types.js';
  *
  * 既知の制約:
  * - windowMs を超える遅延 API レスポンスは紐付けに失敗し、トリガーの click が ui に誤分類される可能性がある
- * - 分類結果は Claude Code へのヒントであり、最終判断ではない（元計画書 L889 参照）
+ * - 分類結果は Codex へのヒントであり、最終判断ではない（元計画書 L889 参照）
  * - レコーダーの networkFilter.excludePatterns が記録時点でリクエストを除外するため、
  *   分析の goalExcludePatterns より先にデータが失われる場合がある
  */

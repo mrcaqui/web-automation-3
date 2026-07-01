@@ -39,5 +39,5 @@ export const config: WaConfig = {
     os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'AutomationProfile'
   ),
   recordingsDir: './recordings',
-  skillsDir: './.claude/skills',
+  skillsDir: './.agents/skills',
 };

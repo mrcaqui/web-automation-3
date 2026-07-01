@@ -104,9 +104,9 @@ export function buildBrief(
   // --- スキルファイル生成指示 ---
   lines.push('## スキルファイル生成指示');
   lines.push('');
-  lines.push('`skill-creator` スキルを使い、`.claude/skills/skill-authoring-guide.md` に従ってスキルファイルを生成してください。');
+  lines.push('`skill-creator` スキルを使い、`.agents/skills/skill-authoring-guide.md` に従ってスキルファイルを生成してください。');
   lines.push('');
-  lines.push(`- **生成先**: \`.claude/skills/${taskName}/SKILL.md\``);
+  lines.push(`- **生成先**: \`.agents/skills/${taskName}/SKILL.md\``);
   lines.push(`- **対象 URL**: \`${data.startUrl}\``);
   lines.push(`- **ブラウザ接続**: \`pnpm wa chrome\` で起動コマンドを確認`);
 

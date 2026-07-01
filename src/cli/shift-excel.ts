@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { DEFAULT_SHIFT_FILE } from './shift-path.js';
 
 interface ShiftEntry {
   date: string;
@@ -16,7 +17,7 @@ export async function runShiftExcel(
   member: string,
   opts: { file?: string },
 ) {
-  const filePath = opts.file ?? '.agents/skills/shift/shift.xlsx';
+  const filePath = opts.file ?? DEFAULT_SHIFT_FILE;
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(filePath);
 

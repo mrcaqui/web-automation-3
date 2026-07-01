@@ -52,7 +52,7 @@ function scanTasks(): TaskInfo[] {
     const briefPath = path.join(latestDir, 'analysis-brief.md');
     const briefed = fs.existsSync(briefPath);
 
-    // skilled: .claude/skills/<name>/SKILL.md が存在する
+    // skilled: .agents/skills/<name>/SKILL.md が存在する
     const skillPath = path.join(skillsDir, taskDir.name, 'SKILL.md');
     const skilled = fs.existsSync(skillPath);
 

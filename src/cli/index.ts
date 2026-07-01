@@ -7,6 +7,7 @@ import { runList } from './list.js';
 import { runShiftExcel } from './shift-excel.js';
 import { runShiftDownload } from './shift-download.js';
 import { runChrome } from './chrome.js';
+import { DEFAULT_SHIFT_FILE } from './shift-path.js';
 
 const program = new Command();
 program
@@ -21,7 +22,7 @@ program.command('record <name>')
   .action(runRecord);
 
 program.command('analyze <name>')
-  .description('記録を分析しanalysis-brief.mdを生成する（スキル生成はClaude Codeが担当）')
+  .description('記録を分析しanalysis-brief.mdを生成する（スキル生成はCodexが担当）')
   .option('--tag <tag>', 'タグで記録を絞り込む')
   .option('--dir <dir>', '記録ディレクトリ名を直接指定する')
   .action((name, opts) => runAnalyze(name, undefined, opts));
@@ -46,7 +47,7 @@ program.command('shift-download')
 
 program.command('shift-excel <sheet> <member>')
   .description('シフト表 Excel を解析し、メンバーの上段行・下段行の値を JSON で出力する')
-  .option('--file <path>', 'Excel ファイルパス', '.claude/skills/shift/shift.xlsx')
+  .option('--file <path>', 'Excel ファイルパス', DEFAULT_SHIFT_FILE)
   .action((sheet, member, opts) => runShiftExcel(sheet, member, opts));
 
 program.parseAsync().then(() => process.exit(process.exitCode ?? 0)).catch((e) => {
